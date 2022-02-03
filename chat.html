@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Chat App</title>
+    <style>
+        body {
+            background: #f0f1f2;
+            font:12px "Open Sans", sans-serif;
+            font-weight: bold;
+        }
+        .container {
+            margin: auto;
+            width: 60%;
+            border: 5px solid #000000;
+            padding: 10px;
+            background: rgb(151, 205, 250);
+            border-radius: 20px;
+        }
+        #chatDisplay p {
+            font-size: 20px;
+            color:maroon;
+            margin: 5px;
+            margin-bottom: 5px;
+        }
+        .bottom-panel, .bottom-panel input {
+            font-size: 20px;
+            border-radius: 20px;
+        }
+        #sendButton {
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 20px;
+            background-color:midnightblue;
+            color: white;
+        }
+        #switch {
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 20px;
+            background-color: red;
+        }
+        #killSwitch {
+            font-size: 20px;
+            font-weight: bold;
+            border-radius: 20px;
+            background-color: red;
+        }
+    </style>
+
+    </style>
+    <script 
+    src="https://cdn.socket.io/4.4.1/socket.io.min.js" 
+    integrity="sha384-fKnu0iswBIqkjxrhQCTZ7qlLHOFEgNkRmK2vaO/LbTZSXdJfAu6ewRBdwHPhBo/H" 
+    crossorigin="anonymous">
+    </script>
+</head>
+<body onload = "enableUi()">
+    <div class="container" style="height: 500px;max-height: 500px;overflow-y: scroll;">
+        <div id="chatDisplay"></div>
+    </div>
+    <div class="container bottom-panel">
+        <button id='switch'>Connect</button>
+        <button id='killSwitch'>Disconnect</button>
+        <p>Number of people in the chat: <span id="user-display" >--</span></p>
+        <p>Current Server Time: <span id="time-display"></span></p>
+        <p>Your Name: <input type="text" id="name" /></p>
+        <p>Your Message: <input type="text" id="message" style="width: 100%" /></p>
+        <button id='sendButton'>Send Message</button>
+        
+    </div>
+    <script>
+        //disable buttons and text fields on page load
+        function enableUi() {
+        document.getElementById("sendButton").disabled = true;
+        document.getElementById("killSwitch").disabled = true;
+        document.querySelector('#name').disabled = true;
+        document.querySelector('#message').disabled = true;
+        }
+                //define our DOM elements
+        const displayArea = document.querySelector('#chatDisplay');
+        const sendButton = document.querySelector('#sendButton');
+        const timeDisplay = document.querySelector('#time-display');
+        const nameTextbox = document.querySelector('#name');
+        const messageTextbox = document.querySelector('#message');
+        const userDisplay = document.querySelector('#user-display');
+        const toggleSwitch = document.querySelector('#switch');
+        const killSwitch = document.querySelector('#killSwitch');
+
+        //Adding Abort event to listener
+        const connector = new AbortController();
+
+
+        //initiate the socket connection
+        toggleSwitch.addEventListener('click',()=>{
+        
+        //try to connect to a server on port 3000 
+        const socket = io();
+
+        //Disable connect button
+        connector.abort();
+
+        //enable sendButton, kill switch, name box, message box
+        document.getElementById("sendButton").disabled = false;
+        document.getElementById("killSwitch").disabled = false;
+        document.querySelector('#name').disabled = false;
+        document.querySelector('#message').disabled = false;
+            
+        //capture and log welcome message from the server
+        socket.on('welcome', message =>{
+        addMessageToDisplay(message);
+        });
+            
+        socket.on('message', message =>{
+        //display the message in the chat 
+        console.log(`${message.name}: ${message.message}`);
+        
+        //display message in the display area
+        addMessageToDisplay(`${message.name}: ${message.message}`);
+        // addMessageToDisplay(`${message.message}`);
+        })
+        
+        //Add message to display code refactor
+        const addMessageToDisplay = messageText => {
+        const pTag = document.createElement('p');
+        pTag.innerHTML = messageText;
+        displayArea.appendChild(pTag);
+        }
+        
+        //Display current time on the App
+        socket.on('time', time =>{
+        timeDisplay.innerHTML = time;
+        });
+        
+        //Display number of clients in the chat
+        socket.on('total', total =>{
+        userDisplay.innerHTML = total;
+        });
+        
+        //sens a message to the server when that button is clicked
+        sendButton.addEventListener('click', ()=>{
+        if(nameTextbox.value.length === 0){
+        alert('you must enter a name.');
+        } else if(messageTextbox.value.length === 0){
+        alert('you must enter a message.');
+        } else {
+        //send the message
+        socket.emit('message',{
+        name: nameTextbox.value, 
+        message: messageTextbox.value
+        });
+        //Clear message textbox
+        messageTextbox.value='';
+        }
+        });
+        
+        killSwitch.addEventListener('click',()=>{
+        location.reload();
+        });
+
+        },{ signal: connector.signal });
+    </script>
+    </body>
+</html>
